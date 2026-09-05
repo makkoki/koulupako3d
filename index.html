@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#24164f">
+  <title>Koulupako 3D</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="game" aria-label="Koulupako 3D -pelialue"></canvas>
+
+  <header id="hud" class="hidden" aria-live="polite">
+    <div><span class="icon">⏱</span><span class="label">Aika</span><strong id="time">00:00</strong></div>
+    <div><span class="icon">🔑</span><span class="label">Avaimet</span><strong id="key-count">0 / 5</strong></div>
+    <div><span class="icon">❤</span><span class="label">Elämät</span><strong id="lives">3</strong></div>
+  </header>
+  <div id="crosshair" class="hidden" aria-hidden="true"></div>
+  <div id="message" role="status"></div>
+
+  <section id="start-screen" class="screen active">
+    <div class="panel hero-panel">
+      <p class="eyebrow">SEIKKAILU ALKAA</p>
+      <h1>KOULUPAKO <span>3D</span></h1>
+      <p class="lead">Löydä viisi avainta ja pääse koulusta ulos ennen kuin robottivartija saa sinut kiinni!</p>
+      <div class="instructions">
+        <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>Liiku</span></div>
+        <div><span class="mouse">↖</span><span>Hiiri = katso ympärille</span></div>
+      </div>
+      <button id="start-button">ALOITA PELI <span>▶</span></button>
+      <p class="tip">Vinkki: keltaiset avaimet hohtavat pimeässäkin.</p>
+    </div>
+  </section>
+
+  <section id="pause-screen" class="screen">
+    <div class="panel small-panel">
+      <p class="eyebrow">PELI TAUOLLA</p><h2>JATKETAANKO?</h2>
+      <p>Klikkaa jatkaaksesi. Voit vapauttaa hiiren painamalla Esc.</p>
+      <button id="continue-button">JATKA PELIÄ</button>
+    </div>
+  </section>
+
+  <section id="end-screen" class="screen">
+    <div class="panel small-panel">
+      <div id="end-icon" class="end-icon">🏆</div>
+      <h2 id="end-title">PÄÄSIT ULOS!</h2>
+      <p id="end-text">Loppuaika: <strong>00:00</strong></p>
+      <button id="restart-button">PELAA UUDELLEEN</button>
+    </div>
+  </section>
+
+  <noscript>Peli tarvitsee JavaScriptin toimiakseen.</noscript>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
