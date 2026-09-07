@@ -3,7 +3,7 @@
 
 const TOTAL_KEYS = 5;
 // Hieman kapeampi törmäysalue tekee luokkien oviaukoista sujuvia myös kosketusohjauksella.
-const PLAYER_RADIUS = 0.34;
+const PLAYER_RADIUS = 0.24;
 const START = new THREE.Vector3(0, 1.7, 14.5);
 const state = { started: false, playing: false, won: false, keys: 0, lives: 3, startTime: 0, elapsed: 0 };
 let scene, camera, renderer, clock, exitDoor, robot, robotLight, messageTimer;
@@ -150,7 +150,7 @@ function tryMove(dx,dz){const next=camera.position.clone();next.x+=dx;next.z+=dz
 function updateRobot(dt) {
   const playerFlat=new THREE.Vector3(camera.position.x,0,camera.position.z), distance=robot.position.distanceTo(playerFlat); let target;
   if(distance<8.5) target=playerFlat; else {target=robotState.points[robotState.waypoint];if(robot.position.distanceTo(target)<.6)robotState.waypoint=(robotState.waypoint+1)%robotState.points.length;}
-  const dir=target.clone().sub(robot.position);dir.y=0;if(dir.lengthSq()>.01){dir.normalize();const speed=distance<8.5?1.65:.9;robot.position.addScaledVector(dir,speed*dt);robot.rotation.y=Math.atan2(-dir.x,-dir.z);}
+  const dir=target.clone().sub(robot.position);dir.y=0;if(dir.lengthSq()>.01){dir.normalize();const speed=distance<8.5?0.5:.5;robot.position.addScaledVector(dir,speed*dt);robot.rotation.y=Math.atan2(-dir.x,-dir.z);}
   robot.position.y=Math.sin(performance.now()*.006)*.04; robotLight.intensity=distance<8.5?2.8:1.2;
   if(distance<1.15&&hitCooldown<=0) playerHit();
 }
