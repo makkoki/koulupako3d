@@ -26,11 +26,22 @@
       <div class="instructions">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>Liiku</span></div>
         <div><span class="mouse">↖</span><span>Hiiri = katso ympärille</span></div>
+        <div class="touch-hint"><span class="touch-icon">✥</span><span>Nuolilla liikut, pyyhkäisemällä katsot</span></div>
       </div>
       <button id="start-button">ALOITA PELI <span>▶</span></button>
       <p class="tip">Vinkki: keltaiset avaimet hohtavat pimeässäkin.</p>
     </div>
   </section>
+
+  <div id="mobile-controls" class="hidden" aria-label="Mobiiliohjaimet">
+    <div id="look-area" aria-label="Katso ympärille pyyhkäisemällä"><span>PYYHKÄISE<br>KATSOAKSESI</span></div>
+    <div class="d-pad" aria-label="Liikkumisnuolet">
+      <button class="move up" data-key="KeyW" aria-label="Liiku eteenpäin">▲</button>
+      <button class="move left" data-key="KeyA" aria-label="Liiku vasemmalle">◀</button>
+      <button class="move down" data-key="KeyS" aria-label="Liiku taaksepäin">▼</button>
+      <button class="move right" data-key="KeyD" aria-label="Liiku oikealle">▶</button>
+    </div>
+  </div>
 
   <section id="pause-screen" class="screen">
     <div class="panel small-panel">

@@ -8,6 +8,7 @@ const state = { started: false, playing: false, won: false, keys: 0, lives: 3, s
 let scene, camera, renderer, clock, exitDoor, robot, robotLight, messageTimer;
 let yaw = 0, pitch = 0, hitCooldown = 0;
 const pressed = {}, colliders = [], keyItems = [];
+const isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
 const robotState = { waypoint: 0, points: [new THREE.Vector3(0,0,-14),new THREE.Vector3(0,0,10),new THREE.Vector3(-9,0,10),new THREE.Vector3(9,0,-9)] };
 
 const ui = {
@@ -26,6 +27,7 @@ function initGame() {
   renderer.setSize(innerWidth, innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio, 1.7));
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
   clock = new THREE.Clock();
   createLights(); createSchool(); createPlayer(); createKeys(); createRobot(); bindEvents(); animate();
 }
@@ -44,7 +46,8 @@ function box(x,y,z,w,h,d,color, collide=false) {
 function wall(x,z,w,d,color=0xf4eee0) { return box(x,1.6,z,w,3.2,d,color,true); }
 
 function createSchool() {
-  box(0,-.12,0,40,.25,38,0x74b97b); // lattia
+  const floor=box(0,-.12,0,40,.25,38,0xb9c6ca); // lattia
+  const tileCanvas=document.createElement('canvas');tileCanvas.width=tileCanvas.height=128;const ctx=tileCanvas.getContext('2d');ctx.fillStyle='#cbd7d9';ctx.fillRect(0,0,128,128);ctx.strokeStyle='#9eafb3';ctx.lineWidth=3;ctx.strokeRect(1,1,126,126);const tiles=new THREE.CanvasTexture(tileCanvas);tiles.wrapS=tiles.wrapT=THREE.RepeatWrapping;tiles.repeat.set(20,19);floor.material.map=tiles;floor.material.roughness=.82;
   // Ulkoseinät, etuseinässä ulko-oven aukko.
   wall(-11,18.5,18,.45,0x6552a5); wall(11,18.5,18,.45,0x6552a5); wall(0,-18.5,40,.45,0x6552a5);
   wall(-20,0,.45,37,0x6552a5); wall(20,0,.45,37,0x6552a5);
@@ -71,6 +74,11 @@ function createSchool() {
   exitDoor = box(0,1.55,18.38,3.6,3.1,.24,0xd84955); exitDoor.material.emissive.setHex(0x260000);
   box(-2.15,2.7,18.25,.35,.35,.6,0xffd85a); box(2.15,2.7,18.25,.35,.35,.6,0xffd85a);
   const sign=box(0,3.2,18.05,4,.6,.12,0x223052); sign.material.emissive.setHex(0x102040);
+  // Käytävän yksityiskohdat tekevät koulusta elävämmän ja auttavat suunnistamaan.
+  [-13,-8,-3,3,8,13].forEach((z,i)=>{ const lamp=box(0,3.08,z,3,.07,.55,0xfff2b0);lamp.material.emissive.setHex(0xffdc73);lamp.material.emissiveIntensity=.7;if(i%2===0){const light=new THREE.PointLight(0xffe7ac,.55,8);light.position.set(0,2.85,z);scene.add(light);} });
+  [-15,-10,-5,5,10].forEach((z,i)=>{const locker=box(-4.72,1,z,.35,1.85,1.35,i%2?0x58a9c9:0x7072c8);for(let y=.5;y<1.7;y+=.6)box(-4.51,y,z,.03,.025,.55,0xe5edf1);});
+  [-15,-5,5,15].forEach(z=>{box(4.65,.42,z,.58,.75,.58,0xa76a42);const leaves=new THREE.Mesh(new THREE.SphereGeometry(.48,12,9),mat(0x3eaa65));leaves.position.set(4.65,1.05,z);leaves.castShadow=true;scene.add(leaves);});
+  const exitGlow=new THREE.PointLight(0xff5b55,1.3,7);exitGlow.position.set(0,2.1,16.5);scene.add(exitGlow);exitDoor.userData.glow=exitGlow;
 }
 
 function createPlayer() { camera.position.copy(START); scene.add(camera); }
@@ -107,9 +115,21 @@ function bindEvents() {
   addEventListener('mousemove',e=>{if(document.pointerLockElement===ui.canvas&&state.playing){yaw-=e.movementX*.0022;pitch-=e.movementY*.0022;pitch=Math.max(-1.45,Math.min(1.45,pitch));}});
   document.addEventListener('pointerlockchange',()=>{ if(state.started&&!state.won&&state.lives>0){state.playing=document.pointerLockElement===ui.canvas; ui.pause.classList.toggle('active',!state.playing);} });
   addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+  bindTouchControls();
 }
-function requestLock(){ ui.canvas.requestPointerLock(); }
-function startGame(){ state.started=true;state.playing=true;state.startTime=performance.now();ui.start.classList.remove('active');ui.pause.classList.remove('active');ui.hud.classList.remove('hidden');ui.crosshair.classList.remove('hidden');requestLock(); }
+function bindTouchControls(){
+  if(!isTouch)return;
+  document.querySelectorAll('.move').forEach(button=>{
+    const set=(active)=>{pressed[button.dataset.key]=active;button.classList.toggle('active',active);};
+    button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture(e.pointerId);set(true);});
+    ['pointerup','pointercancel','lostpointercapture'].forEach(type=>button.addEventListener(type,()=>set(false)));
+  });
+  const look=document.querySelector('#look-area');let lastX=0,lastY=0;
+  look.addEventListener('pointerdown',e=>{lastX=e.clientX;lastY=e.clientY;look.setPointerCapture(e.pointerId);look.classList.add('used');});
+  look.addEventListener('pointermove',e=>{if(!look.hasPointerCapture(e.pointerId)||!state.playing)return;yaw-=(e.clientX-lastX)*.006;pitch-=(e.clientY-lastY)*.006;pitch=Math.max(-1.2,Math.min(1.2,pitch));lastX=e.clientX;lastY=e.clientY;});
+}
+function requestLock(){ if(!isTouch&&ui.canvas.requestPointerLock)ui.canvas.requestPointerLock(); }
+function startGame(){ state.started=true;state.playing=true;state.startTime=performance.now();ui.start.classList.remove('active');ui.pause.classList.remove('active');ui.hud.classList.remove('hidden');ui.crosshair.classList.remove('hidden');if(isTouch)document.querySelector('#mobile-controls').classList.remove('hidden');requestLock(); }
 
 function updatePlayer(dt) {
   camera.rotation.order='YXZ';camera.rotation.y=yaw;camera.rotation.x=pitch;
@@ -123,13 +143,13 @@ function tryMove(dx,dz){const next=camera.position.clone();next.x+=dx;next.z+=dz
 function updateRobot(dt) {
   const playerFlat=new THREE.Vector3(camera.position.x,0,camera.position.z), distance=robot.position.distanceTo(playerFlat); let target;
   if(distance<8.5) target=playerFlat; else {target=robotState.points[robotState.waypoint];if(robot.position.distanceTo(target)<.6)robotState.waypoint=(robotState.waypoint+1)%robotState.points.length;}
-  const dir=target.clone().sub(robot.position);dir.y=0;if(dir.lengthSq()>.01){dir.normalize();const speed=distance<8.5?3.25:1.8;robot.position.addScaledVector(dir,speed*dt);robot.rotation.y=Math.atan2(-dir.x,-dir.z);}
+  const dir=target.clone().sub(robot.position);dir.y=0;if(dir.lengthSq()>.01){dir.normalize();const speed=distance<8.5?2.25:1.25;robot.position.addScaledVector(dir,speed*dt);robot.rotation.y=Math.atan2(-dir.x,-dir.z);}
   robot.position.y=Math.sin(performance.now()*.006)*.04; robotLight.intensity=distance<8.5?2.8:1.2;
   if(distance<1.15&&hitCooldown<=0) playerHit();
 }
 
 function collectKeys(t) {
-  keyItems.forEach(key=>{if(!key.visible)return;key.rotation.y+=t*.0015;key.position.y=key.userData.baseY+Math.sin(t*.003+key.userData.index)*.14;if(camera.position.distanceTo(key.position)<1.35){key.visible=false;key.userData.glow.visible=false;state.keys++;ui.keys.textContent=`${state.keys} / ${TOTAL_KEYS}`;showMessage('🔑 Avain löydetty!');if(state.keys===TOTAL_KEYS){exitDoor.material.color.setHex(0x35d16f);exitDoor.material.emissive.setHex(0x075f28);showMessage('Kaikki avaimet löydetty – ulko-ovi on auki!',2600);}}});
+  keyItems.forEach(key=>{if(!key.visible)return;key.rotation.y+=t*.0015;key.position.y=key.userData.baseY+Math.sin(t*.003+key.userData.index)*.14;if(camera.position.distanceTo(key.position)<1.35){key.visible=false;key.userData.glow.visible=false;state.keys++;ui.keys.textContent=`${state.keys} / ${TOTAL_KEYS}`;showMessage('🔑 Avain löydetty!');if(state.keys===TOTAL_KEYS){exitDoor.material.color.setHex(0x35d16f);exitDoor.material.emissive.setHex(0x075f28);exitDoor.userData.glow.color.setHex(0x35ff83);showMessage('Kaikki avaimet löydetty – ulko-ovi on auki!',2600);}}});
 }
 function checkCollisions(){const d=Math.hypot(camera.position.x,camera.position.z-18.2);if(d<2.2){if(state.keys===TOTAL_KEYS)winGame();else{showMessage('🔒 Etsi vielä kaikki avaimet!');camera.position.z=Math.min(camera.position.z,16.7);}}}
 function playerHit(){hitCooldown=2;state.lives--;ui.lives.textContent=state.lives;showMessage('⚡ Robotti sai sinut! Menetit elämän.',2200);camera.position.copy(START);robot.position.set(0,0,-13);if(state.lives<=0)gameOver();}
@@ -137,7 +157,7 @@ function playerHit(){hitCooldown=2;state.lives--;ui.lives.textContent=state.live
 function updateTimer(){state.elapsed=(performance.now()-state.startTime)/1000;ui.time.textContent=formatTime(state.elapsed);}
 function formatTime(seconds){const s=Math.floor(seconds);return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;}
 function showMessage(text,duration=1500){ui.message.textContent=text;ui.message.classList.add('show');clearTimeout(messageTimer);messageTimer=setTimeout(()=>ui.message.classList.remove('show'),duration);}
-function finish(title,text,icon){state.playing=false;state.won=true;if(document.pointerLockElement)document.exitPointerLock();ui.pause.classList.remove('active');ui.endTitle.textContent=title;ui.endText.innerHTML=text;ui.endIcon.textContent=icon;ui.end.classList.add('active');ui.crosshair.classList.add('hidden');}
+function finish(title,text,icon){state.playing=false;state.won=true;if(document.pointerLockElement)document.exitPointerLock();ui.pause.classList.remove('active');ui.endTitle.textContent=title;ui.endText.innerHTML=text;ui.endIcon.textContent=icon;ui.end.classList.add('active');ui.crosshair.classList.add('hidden');document.querySelector('#mobile-controls').classList.add('hidden');}
 function winGame(){finish('PÄÄSIT ULOS!',`Loppuaika: <strong>${formatTime(state.elapsed)}</strong>`,'🏆');}
 function gameOver(){finish('GAME OVER','Robottivartija sai sinut kiinni. Kokeile uudelleen!','🤖');document.querySelector('#restart-button').textContent='YRITÄ UUDELLEEN';}
 function restartGame(){location.reload();}
