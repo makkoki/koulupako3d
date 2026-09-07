@@ -2,7 +2,7 @@
 
 :root { font-family: Nunito, system-ui, sans-serif; color: #fff; background: #11162c; }
 * { box-sizing: border-box; }
-body { margin: 0; overflow: hidden; width: 100vw; height: 100vh; }
+body { margin: 0; overflow: hidden; width: 100vw; height: 100vh; touch-action: none; }
 #game { display: block; width: 100%; height: 100%; outline: none; }
 .hidden { display: none !important; }
 
@@ -28,6 +28,8 @@ h2 { font-size: clamp(34px,5vw,52px); margin: 8px 0 16px; }
 .instructions > div { display: flex; align-items: center; gap: 7px; color: #dcd8ff; }
 kbd, .mouse { min-width: 29px; padding: 6px 7px; background: #6251a4; border: 1px solid #9486d2; border-radius: 7px; box-shadow: 0 3px #1b1440; font: 800 13px Nunito; }
 .mouse { font-size: 21px; padding: 4px 8px; }
+.touch-hint { display: none !important; }
+.touch-icon { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid #9486d2; border-radius: 9px; background: #6251a4; font-size: 20px; }
 button { cursor: pointer; border: 0; border-radius: 13px; padding: 16px 32px; color: #241843; background: linear-gradient(#ffe668,#f9bd2c); box-shadow: 0 6px #bd7419, 0 12px 30px #0005; font: 900 17px Nunito; letter-spacing: 1px; transition: transform .15s; }
 button:hover { transform: translateY(-2px) scale(1.02); }
 button:active { transform: translateY(3px); box-shadow: 0 3px #bd7419; }
@@ -36,4 +38,35 @@ button:active { transform: translateY(3px); box-shadow: 0 3px #bd7419; }
 .small-panel p { color: #ddd8fb; }
 .end-icon { font-size: 65px; }
 noscript { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; background: #21194b; }
-@media (max-width: 600px) { .panel { padding: 26px 20px; } .instructions { flex-direction: column; gap: 13px; align-items: center; } #hud > div { min-width: auto; padding: 8px 10px; } #hud .label { display:none; } }
+
+#mobile-controls { position: fixed; z-index: 7; inset: 0; pointer-events: none; user-select: none; -webkit-user-select: none; }
+.d-pad { position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: max(20px, env(safe-area-inset-bottom)); width: 166px; height: 166px; }
+.d-pad .move { position: absolute; width: 58px; height: 58px; padding: 0; border: 1px solid #ffffff70; border-radius: 18px; color: white; background: linear-gradient(145deg, #6856bddd, #392b7cdd); box-shadow: 0 5px 0 #21174fdd, 0 8px 22px #08051c77, inset 0 1px #fff7; font: 900 22px system-ui; pointer-events: auto; }
+.d-pad .move.active { transform: translateY(3px) scale(.96); background: linear-gradient(145deg, #ffe56e, #ecac29); color: #302050; box-shadow: 0 2px 0 #a66618; }
+.d-pad .up { left: 54px; top: 0; }.d-pad .left { left: 0; top: 54px; }.d-pad .down { left: 54px; top: 108px; }.d-pad .right { left: 108px; top: 54px; }
+#look-area { position: absolute; right: 0; bottom: 0; width: 48%; height: 62%; pointer-events: auto; }
+#look-area span { position: absolute; right: max(25px, env(safe-area-inset-right)); bottom: max(32px, env(safe-area-inset-bottom)); padding: 10px 13px; border: 1px solid #fff3; border-radius: 12px; color: #fff9; background: #29225466; font-size: 9px; font-weight: 900; line-height: 1.25; letter-spacing: 1px; text-align: center; transition: opacity .4s; }
+#look-area.used span { opacity: 0; }
+
+@media (pointer: coarse), (max-width: 760px) {
+  .panel { padding: 24px 19px; max-height: 94dvh; overflow-y: auto; }
+  .hero-panel:before { font-size: 40px; }
+  h1 { font-size: clamp(38px, 13vw, 60px); }
+  .lead { font-size: 15px; margin: 14px auto; }
+  .instructions { margin: 17px 0; }
+  .instructions > div:not(.touch-hint) { display: none; }
+  .instructions .touch-hint { display: flex !important; max-width: 270px; }
+  #hud { top: max(8px, env(safe-area-inset-top)); width: calc(100% - 16px); justify-content: center; }
+  #hud > div { min-width: 0; flex: 1; max-width: 125px; padding: 7px 8px; border-radius: 13px; }
+  #hud .label { display:none; }
+  #hud strong { font-size: 15px; }
+  #message { bottom: 29%; max-width: 90vw; white-space: normal; text-align: center; }
+  #crosshair { opacity: .7; }
+}
+@media (max-height: 520px) and (pointer: coarse) {
+  .d-pad { transform: scale(.78); transform-origin: bottom left; }
+  .hero-panel:before, .tip { display: none; }
+  .panel { padding-block: 15px; }
+  .lead { margin: 8px auto; }
+  .instructions { margin: 10px 0; }
+}
