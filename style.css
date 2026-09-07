@@ -33,6 +33,9 @@ kbd, .mouse { min-width: 29px; padding: 6px 7px; background: #6251a4; border: 1p
 button { cursor: pointer; border: 0; border-radius: 13px; padding: 16px 32px; color: #241843; background: linear-gradient(#ffe668,#f9bd2c); box-shadow: 0 6px #bd7419, 0 12px 30px #0005; font: 900 17px Nunito; letter-spacing: 1px; transition: transform .15s; }
 button:hover { transform: translateY(-2px) scale(1.02); }
 button:active { transform: translateY(3px); box-shadow: 0 3px #bd7419; }
+.pause-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 15px; margin-top: 24px; }
+.secondary-button { color: #fff; background: linear-gradient(#7566b5,#51428f); box-shadow: 0 6px #302568, 0 12px 30px #0005; }
+.secondary-button:active { box-shadow: 0 3px #302568; }
 .tip { font-size: 12px; opacity: .65; margin: 24px 0 -12px; }
 .small-panel { width: min(520px,94vw); }
 .small-panel p { color: #ddd8fb; }

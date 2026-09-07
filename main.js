@@ -2,7 +2,8 @@
 'use strict';
 
 const TOTAL_KEYS = 5;
-const PLAYER_RADIUS = 0.48;
+// Hieman kapeampi törmäysalue tekee luokkien oviaukoista sujuvia myös kosketusohjauksella.
+const PLAYER_RADIUS = 0.34;
 const START = new THREE.Vector3(0, 1.7, 14.5);
 const state = { started: false, playing: false, won: false, keys: 0, lives: 3, startTime: 0, elapsed: 0 };
 let scene, camera, renderer, clock, exitDoor, robot, robotLight, messageTimer;
@@ -91,25 +92,31 @@ function createKeys() {
     const ring=new THREE.Mesh(new THREE.TorusGeometry(.32,.11,10,20),gold); ring.rotation.y=Math.PI/2; group.add(ring);
     const shaft=new THREE.Mesh(new THREE.BoxGeometry(.7,.12,.13),gold); shaft.position.x=.58; group.add(shaft);
     const tooth=new THREE.Mesh(new THREE.BoxGeometry(.14,.3,.13),gold); tooth.position.set(.85,-.13,0); group.add(tooth);
-    group.position.set(x,y,z); group.userData.baseY=y; group.userData.index=i; group.traverse(o=>{if(o.isMesh){o.castShadow=true;}}); scene.add(group); keyItems.push(group);
-    const glow=new THREE.PointLight(0xffbd2e,1.3,4); glow.position.set(x,y,z); scene.add(glow); group.userData.glow=glow;
+    group.scale.setScalar(1.45);group.position.set(x,y,z); group.userData.baseY=y; group.userData.index=i; group.traverse(o=>{if(o.isMesh){o.castShadow=true;}}); scene.add(group); keyItems.push(group);
+    const glow=new THREE.PointLight(0xffd633,3.2,8); glow.position.set(x,y,z); scene.add(glow); group.userData.glow=glow;
+    const beamMaterial=new THREE.MeshBasicMaterial({color:0xffe35a,transparent:true,opacity:.2,depthWrite:false,side:THREE.DoubleSide});
+    const beam=new THREE.Mesh(new THREE.CylinderGeometry(.22,.7,4.8,16,1,true),beamMaterial);beam.position.set(x,2.4,z);scene.add(beam);group.userData.beam=beam;
   });
 }
 
 function createRobot() {
-  robot=new THREE.Group(); const steel=mat(0xd5e0ec), dark=mat(0x303a55), red=mat(0xff3855);
-  const body=new THREE.Mesh(new THREE.BoxGeometry(1.1,1.25,.75),steel); body.position.y=1.25; robot.add(body);
-  const head=new THREE.Mesh(new THREE.BoxGeometry(.9,.65,.7),dark); head.position.y=2.15; robot.add(head);
-  [-.23,.23].forEach(x=>{const eye=new THREE.Mesh(new THREE.SphereGeometry(.09,10,8),red); eye.position.set(x,2.2,-.36); robot.add(eye);});
-  [-.38,.38].forEach(x=>{const leg=new THREE.Mesh(new THREE.BoxGeometry(.25,.62,.3),dark); leg.position.set(x,.35,0); robot.add(leg);});
-  const antenna=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.45,8),dark); antenna.position.y=2.68; robot.add(antenna);
-  robotLight=new THREE.PointLight(0xff274b,1.8,5); robotLight.position.set(0,2,-.5); robot.add(robotLight);
+  robot=new THREE.Group(); const steel=mat(0xbfe9ef), dark=mat(0x59689c), blue=mat(0x55ddff), pink=mat(0xff91ad);
+  const body=new THREE.Mesh(new THREE.CapsuleGeometry(.55,.6,6,12),steel); body.position.y=1.2; robot.add(body);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.58,18,12),steel); head.scale.y=.72;head.position.y=2.14; robot.add(head);
+  [-.23,.23].forEach(x=>{const eye=new THREE.Mesh(new THREE.SphereGeometry(.1,12,9),blue); eye.position.set(x,2.23,-.48); robot.add(eye);});
+  [-.39,.39].forEach(x=>{const cheek=new THREE.Mesh(new THREE.SphereGeometry(.085,10,8),pink);cheek.position.set(x,2.08,-.47);robot.add(cheek);});
+  const smile=new THREE.Mesh(new THREE.TorusGeometry(.18,.035,8,16,Math.PI),dark);smile.position.set(0,2.05,-.52);smile.rotation.z=Math.PI;robot.add(smile);
+  [-.32,.32].forEach(x=>{const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.13,.35,4,8),dark); leg.position.set(x,.38,0); robot.add(leg);});
+  const antenna=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.38,8),dark); antenna.position.y=2.72; robot.add(antenna);
+  const antennaBall=new THREE.Mesh(new THREE.SphereGeometry(.1,10,8),pink);antennaBall.position.y=2.94;robot.add(antennaBall);
+  robotLight=new THREE.PointLight(0x70dcff,1.3,5); robotLight.position.set(0,2,-.5); robot.add(robotLight);
   robot.position.set(0,0,-14); robot.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}}); scene.add(robot);
 }
 
 function bindEvents() {
   document.querySelector('#start-button').addEventListener('click', startGame);
   document.querySelector('#continue-button').addEventListener('click', requestLock);
+  document.querySelector('#quit-button').addEventListener('click', quitGame);
   document.querySelector('#restart-button').addEventListener('click', restartGame);
   addEventListener('keydown',e=>pressed[e.code]=true); addEventListener('keyup',e=>pressed[e.code]=false);
   addEventListener('mousemove',e=>{if(document.pointerLockElement===ui.canvas&&state.playing){yaw-=e.movementX*.0022;pitch-=e.movementY*.0022;pitch=Math.max(-1.45,Math.min(1.45,pitch));}});
@@ -143,13 +150,13 @@ function tryMove(dx,dz){const next=camera.position.clone();next.x+=dx;next.z+=dz
 function updateRobot(dt) {
   const playerFlat=new THREE.Vector3(camera.position.x,0,camera.position.z), distance=robot.position.distanceTo(playerFlat); let target;
   if(distance<8.5) target=playerFlat; else {target=robotState.points[robotState.waypoint];if(robot.position.distanceTo(target)<.6)robotState.waypoint=(robotState.waypoint+1)%robotState.points.length;}
-  const dir=target.clone().sub(robot.position);dir.y=0;if(dir.lengthSq()>.01){dir.normalize();const speed=distance<8.5?2.25:1.25;robot.position.addScaledVector(dir,speed*dt);robot.rotation.y=Math.atan2(-dir.x,-dir.z);}
+  const dir=target.clone().sub(robot.position);dir.y=0;if(dir.lengthSq()>.01){dir.normalize();const speed=distance<8.5?1.65:.9;robot.position.addScaledVector(dir,speed*dt);robot.rotation.y=Math.atan2(-dir.x,-dir.z);}
   robot.position.y=Math.sin(performance.now()*.006)*.04; robotLight.intensity=distance<8.5?2.8:1.2;
   if(distance<1.15&&hitCooldown<=0) playerHit();
 }
 
 function collectKeys(t) {
-  keyItems.forEach(key=>{if(!key.visible)return;key.rotation.y+=t*.0015;key.position.y=key.userData.baseY+Math.sin(t*.003+key.userData.index)*.14;if(camera.position.distanceTo(key.position)<1.35){key.visible=false;key.userData.glow.visible=false;state.keys++;ui.keys.textContent=`${state.keys} / ${TOTAL_KEYS}`;showMessage('🔑 Avain löydetty!');if(state.keys===TOTAL_KEYS){exitDoor.material.color.setHex(0x35d16f);exitDoor.material.emissive.setHex(0x075f28);exitDoor.userData.glow.color.setHex(0x35ff83);showMessage('Kaikki avaimet löydetty – ulko-ovi on auki!',2600);}}});
+  keyItems.forEach(key=>{if(!key.visible)return;key.rotation.y+=t*.0015;key.position.y=key.userData.baseY+Math.sin(t*.003+key.userData.index)*.14;key.userData.beam.material.opacity=.16+Math.sin(t*.004+key.userData.index)*.06;if(camera.position.distanceTo(key.position)<1.65){key.visible=false;key.userData.glow.visible=false;key.userData.beam.visible=false;state.keys++;ui.keys.textContent=`${state.keys} / ${TOTAL_KEYS}`;showMessage('🔑 Avain löydetty!');if(state.keys===TOTAL_KEYS){exitDoor.material.color.setHex(0x35d16f);exitDoor.material.emissive.setHex(0x075f28);exitDoor.userData.glow.color.setHex(0x35ff83);showMessage('Kaikki avaimet löydetty – ulko-ovi on auki!',2600);}}});
 }
 function checkCollisions(){const d=Math.hypot(camera.position.x,camera.position.z-18.2);if(d<2.2){if(state.keys===TOTAL_KEYS)winGame();else{showMessage('🔒 Etsi vielä kaikki avaimet!');camera.position.z=Math.min(camera.position.z,16.7);}}}
 function playerHit(){hitCooldown=2;state.lives--;ui.lives.textContent=state.lives;showMessage('⚡ Robotti sai sinut! Menetit elämän.',2200);camera.position.copy(START);robot.position.set(0,0,-13);if(state.lives<=0)gameOver();}
@@ -160,6 +167,7 @@ function showMessage(text,duration=1500){ui.message.textContent=text;ui.message.
 function finish(title,text,icon){state.playing=false;state.won=true;if(document.pointerLockElement)document.exitPointerLock();ui.pause.classList.remove('active');ui.endTitle.textContent=title;ui.endText.innerHTML=text;ui.endIcon.textContent=icon;ui.end.classList.add('active');ui.crosshair.classList.add('hidden');document.querySelector('#mobile-controls').classList.add('hidden');}
 function winGame(){finish('PÄÄSIT ULOS!',`Loppuaika: <strong>${formatTime(state.elapsed)}</strong>`,'🏆');}
 function gameOver(){finish('GAME OVER','Robottivartija sai sinut kiinni. Kokeile uudelleen!','🤖');document.querySelector('#restart-button').textContent='YRITÄ UUDELLEEN';}
+function quitGame(){finish('PELI PÄÄTTYI','Kiitos pelaamisesta! Voit palata kouluun milloin tahansa.','👋');document.querySelector('#restart-button').textContent='PELAA UUDELLEEN';}
 function restartGame(){location.reload();}
 
 function animate(t=0){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.05);if(state.playing){hitCooldown=Math.max(0,hitCooldown-dt);updatePlayer(dt);updateRobot(dt);collectKeys(t);checkCollisions();updateTimer();}renderer.render(scene,camera);}
